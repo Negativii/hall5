@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { ffmpegPath } from './config.js';
 import { probe, runMediaProcess } from './media.js';
+import { encoderTimeBase } from './mediaTimeBase.js';
 
 // AVC Level 5.2 permits at most 36,864 macroblocks in a frame. Keep the
 // unmodified H.264 preview, but add another codec for larger frames.
@@ -20,11 +21,13 @@ async function encoderArgs(signal, fps) {
   // the source frame rate; this improves startup and seeks without changing
   // any decoded pixels. A low-delay bitstream can be larger than random access.
   const keyframes = ['-g', String(Math.max(1, Math.round((fps > 0 ? fps : 24) * 2)))];
-  if (/\blibsvtav1\b/.test(stdout)) return ['-c:v', 'libsvtav1', '-preset', '6', ...keyframes,
-    '-svtav1-params', 'lossless=1:lp=2:enable-tf=0:chroma-sample-position=left:pred-struct=1:hierarchical-levels=2:lookahead=0'];
+  // Debian ships an older SVT encoder without working lossless support.
+  // Prefer libaom when both are present; decoded verification remains mandatory.
   if (/\blibaom-av1\b/.test(stdout)) return ['-c:v', 'libaom-av1', '-cpu-used', '6',
     '-crf', '0', '-b:v', '0', '-row-mt', '1', ...keyframes,
     '-lag-in-frames', '0', '-auto-alt-ref', '0', '-aom-params', 'lossless=1:chroma-sample-position=1'];
+  if (/\blibsvtav1\b/.test(stdout)) return ['-c:v', 'libsvtav1', '-preset', '6', ...keyframes,
+    '-svtav1-params', 'lossless=1:lp=2:enable-tf=0:chroma-sample-position=left:pred-struct=1:hierarchical-levels=2:lookahead=0'];
   throw new Error('Для этого разрешения нужен FFmpeg с AV1 без потерь (SVT-AV1 3.0.2+ или libaom). Исходное видео сохранено.');
 }
 
@@ -60,7 +63,7 @@ async function decodedFingerprint(file, info, signal) {
   };
   await runMediaProcess(ffmpegPath, ['-nostdin', '-v', 'error', '-i', file,
     '-map', `0:${info.videoStream}`, '-an', '-sn', '-dn', '-c:v', 'rawvideo', '-pix_fmt', info.pixelFormat,
-    '-fps_mode', 'passthrough', '-enc_time_base', 'demux', '-f', 'framehash', '-hash', 'sha256', '-'], {
+    '-fps_mode', 'passthrough', '-enc_time_base', encoderTimeBase(info), '-f', 'framehash', '-hash', 'sha256', '-'], {
     ...processOptions(signal), onStdout: (chunk) => {
       pending += chunk;
       const lines = pending.split('\n'); pending = lines.pop();
@@ -152,7 +155,7 @@ export async function createCompatibilityPreview(input, output, { info, signal, 
   const args = ['-nostdin', '-y', '-i', input, '-map', `0:${source.videoStream}`,
     '-map', source.hasAudio ? `0:${source.audioStream}` : '0:a:0?',
     ...await encoderArgs(signal, source.fps), '-pix_fmt', 'yuv420p', ...colors,
-    '-fps_mode', 'passthrough', '-enc_time_base', 'demux', '-c:a', 'copy', '-sn', '-dn', '-movflags', '+faststart',
+    '-fps_mode', 'passthrough', '-enc_time_base', encoderTimeBase(source), '-c:a', 'copy', '-sn', '-dn', '-movflags', '+faststart',
     '-progress', 'pipe:1', '-nostats', '-f', 'mp4', output];
   await runMediaProcess(ffmpegPath, args, { ...processOptions(signal), onStdout: (chunk) => {
     for (const match of chunk.matchAll(/out_time_us=(\d+)/g)) onProgress?.(Math.min(0.95, Number(match[1]) / 1e6 / source.duration * 0.95));

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { ffmpegPath, ffprobePath } from './config.js';
 import { probe, runMediaProcess } from './media.js';
+import { encoderTimeBase } from './mediaTimeBase.js';
 
 // A separate rendition for simultaneous phone playback. Full-quality files
 // remain separate; this rendition intentionally trades detail for decoder cost.
@@ -113,7 +114,7 @@ export async function createMobilePreview(input, output, { info, signal, onProgr
     '-c:v', 'libx264', '-preset', 'medium', '-tune', 'zerolatency', '-crf', '20',
     '-maxrate', '4M', '-bufsize', '8M', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
     '-bf', '0', '-refs', '1', '-g', String(plan.keyframeInterval), ...colors,
-    '-fps_mode', 'passthrough', '-enc_time_base', 'demux', '-c:a', 'copy', '-sn', '-dn',
+    '-fps_mode', 'passthrough', '-enc_time_base', encoderTimeBase(source), '-c:a', 'copy', '-sn', '-dn',
     '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', '-f', 'mp4', output], {
     ...processOptions(signal), onStdout: chunk => {
       for (const match of chunk.matchAll(/out_time_us=(\d+)/g)) onProgress?.(Math.min(0.95, Number(match[1]) / 1e6 / source.duration * 0.95));

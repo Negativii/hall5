@@ -11,7 +11,7 @@ const commands = [
   ['tests/backend-reliability.mjs'],
   ['tests/replacement-cancel.mjs'],
   ['tests/video-scenes-api.mjs'],
-  ['--test', 'tests/media-quality.mjs', 'tests/compatibility-preview.mjs', 'tests/mobile-preview.mjs'],
+  ['--test', 'tests/media-timebase.mjs', 'tests/media-quality.mjs', 'tests/compatibility-preview.mjs', 'tests/mobile-preview.mjs'],
   ['tests/project-workflow-browser.mjs'],
   ['tests/scene-workflow-browser.mjs'],
   ['tests/production-smoke.mjs'],
