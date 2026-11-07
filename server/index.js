@@ -26,8 +26,9 @@ import { publicLegalConfig, pruneExpiredFeedback } from './legal.js';
 
 const app = express();
 app.disable('x-powered-by');
-// Only our local reverse proxy may supply client IP / HTTPS headers.
-app.set('trust proxy', 'loopback');
+// Docker bridge deployments must explicitly list the host proxy's address.
+// Never trust arbitrary forwarded headers from every network peer.
+app.set('trust proxy', ['loopback', ...(process.env.TRUSTED_PROXY_IPS || '').split(',').map(value => value.trim()).filter(Boolean)]);
 app.use(compression());
 
 app.use((req, res, next) => {
