@@ -1,0 +1,19 @@
+services:
+  hall5:
+    build: .
+    container_name: hall5
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set a private admin password of at least 12 characters}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      MAX_UPLOAD_GB: ${MAX_UPLOAD_GB:-16}
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-}
+      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}
+      LEGAL_OPERATOR_EMAIL: ${LEGAL_OPERATOR_EMAIL:-}
+    volumes:
+      - hall5-data:/data
+
+volumes:
+  hall5-data:

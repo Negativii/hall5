@@ -1,0 +1,12 @@
+node_modules
+dist
+data
+.env
+*.log
+tests/shots
+.npm-cache
+tests/tmp
+*.tsbuildinfo
+# Archive screenshots can contain private project metadata.
+docs/screens/*
+!docs/screens/pages-demo.png
